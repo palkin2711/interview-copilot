@@ -1,4 +1,4 @@
-const CACHE_NAME = "interview-copilot-v6";
+const CACHE_NAME = "interview-copilot-v7";
 const APP_SHELL = ["/", "/styles.css", "/app.js", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {

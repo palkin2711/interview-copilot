@@ -68,26 +68,6 @@ async function askGemini(url, prompt) {
   return { answer, finishReason: data?.candidates?.[0]?.finishReason || "" };
 }
 
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function askGeminiWithRetry(url, prompt) {
-  const delays = [0, 250, 700];
-  let lastError;
-  for (let attempt = 0; attempt < delays.length; attempt += 1) {
-    if (delays[attempt]) await wait(delays[attempt]);
-    try {
-      return await askGemini(url, prompt);
-    } catch (error) {
-      lastError = error;
-      const temporary = [429, 500, 502, 503, 504].includes(Number(error?.status)) || /high demand|temporar|overload|unavailable/i.test(error?.message || "");
-      if (!temporary) throw error;
-    }
-  }
-  throw lastError;
-}
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -111,14 +91,8 @@ export default async function handler(req, res) {
 
   try {
     const prompt = buildPrompt(req.body || {});
-    let result = await askGeminiWithRetry(url, prompt);
-    let answer = result.answer;
-
-    const wordCount = String(answer || "").split(/\s+/).filter(Boolean).length;
-    if (answer && answer.toUpperCase() !== "WAIT" && (wordCount < 40 || result.finishReason === "MAX_TOKENS")) {
-      result = await askGeminiWithRetry(url, `${prompt}\n\nYour previous response was incomplete. Return one fresh, complete 70 to 120 word answer with 5 to 8 finished, natural sentences.`);
-      answer = result.answer;
-    }
+    const result = await askGemini(url, prompt);
+    const answer = result.answer;
 
     if (!answer) {
       return res.status(502).json({ error: "No answer was returned. Please try again." });
@@ -131,6 +105,10 @@ export default async function handler(req, res) {
     res.setHeader("Cache-Control", "no-store");
     return res.status(200).json({ answer });
   } catch (error) {
-    return res.status(error?.status || 500).json({ error: error?.message || "Unexpected server error." });
+    const retryMatch = String(error?.message || "").match(/retry in\s+([0-9.]+)s/i);
+    return res.status(error?.status || 500).json({
+      error: error?.message || "Unexpected server error.",
+      retryAfterSeconds: retryMatch ? Math.ceil(Number(retryMatch[1])) : undefined
+    });
   }
 }

@@ -15,7 +15,8 @@
     history: [],
     syncTimer: null,
     lastSyncAt: 0,
-    pendingQuestion: ""
+    pendingQuestion: "",
+    retryDelayMs: 0
   };
 
   const els = Object.fromEntries([
@@ -306,7 +307,11 @@
         })
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Unable to generate an answer.");
+      if (!response.ok) {
+        const requestError = new Error(data.error || "Unable to generate an answer.");
+        requestError.retryAfterSeconds = Number(data.retryAfterSeconds || 0);
+        throw requestError;
+      }
       if (data.wait) {
         els.answerText.textContent = "Listening… I will answer when the interviewer finishes the question.";
         setStatus(state.listening ? "listening" : "", "Listening for the complete question", "The last speech was incomplete, so no answer was generated.");
@@ -318,6 +323,15 @@
       state.history = state.history.slice(-6);
       setStatus(state.listening ? "listening" : "", state.listening ? "Listening for the next question" : "Answer ready", state.listening ? "You do not need to press anything for the next question." : "Review the answer in your own words.");
     } catch (error) {
+      if (error.retryAfterSeconds > 0) {
+        const waitSeconds = Math.max(2, error.retryAfterSeconds + 1);
+        state.pendingQuestion = state.pendingQuestion || cleanQuestion;
+        state.retryDelayMs = waitSeconds * 1000;
+        state.lastSubmitted = "";
+        els.answerText.textContent = `Free Gemini limit reached. Retrying automatically in ${waitSeconds} seconds…`;
+        setStatus("thinking", "Waiting for free Gemini quota", "No button is needed; the question will retry automatically.");
+        return;
+      }
       const busy = /high demand|temporar|overload|unavailable/i.test(error.message || "");
       els.answerText.textContent = busy
         ? "Gemini is temporarily busy. The app tried three times automatically. Please continue listening; the next question will be attempted normally."
@@ -331,7 +345,9 @@
       const nextQuestion = state.pendingQuestion;
       state.pendingQuestion = "";
       if (nextQuestion && nextQuestion !== state.lastSubmitted) {
-        window.setTimeout(() => generateAnswer(nextQuestion), 120);
+        const delay = state.retryDelayMs || 120;
+        state.retryDelayMs = 0;
+        window.setTimeout(() => generateAnswer(nextQuestion), delay);
       }
     }
   }
