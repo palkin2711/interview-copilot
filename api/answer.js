@@ -1,4 +1,4 @@
-const DEFAULT_MODEL = "gemini-2.5-flash";
+const DEFAULT_MODEL = "gemini-3.6-flash";
 
 function clean(value, max) {
   return String(value || "").replace(/\0/g, "").trim().slice(0, max);
@@ -23,8 +23,9 @@ STRICT RULES:
 - If the profile lacks the requested fact, give an honest bridge answer explaining how the candidate would approach it.
 - Write in first person, natural spoken English.
 - Use simple vocabulary suitable for a non-native English speaker.
+- If the transcript is not a complete interview question, return exactly: WAIT
 - Return only the answer, with no heading, disclaimer, quotation marks, or coaching notes.
-- Keep it between 45 and 85 words, normally 3 to 5 short sentences.
+- Keep it between 30 and 60 words, normally 2 to 4 short sentences.
 - Start directly; do not repeat the question.
 
 CANDIDATE PROFILE / RESUME:
@@ -70,7 +71,7 @@ export default async function handler(req, res) {
         generationConfig: {
           temperature: 0.35,
           topP: 0.9,
-          maxOutputTokens: 220
+          maxOutputTokens: 140
         },
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
@@ -93,6 +94,10 @@ export default async function handler(req, res) {
 
     if (!answer) {
       return res.status(502).json({ error: "No answer was returned. Please try again." });
+    }
+
+    if (answer.trim().toUpperCase() === "WAIT") {
+      return res.status(200).json({ answer: "", wait: true });
     }
 
     res.setHeader("Cache-Control", "no-store");

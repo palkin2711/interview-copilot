@@ -10,6 +10,7 @@
     { "source": "/icon-512.png", "destination": "/public/icon-512.png" }
   ],
   "functions": {
-    "api/answer.js": { "maxDuration": 30 }
+    "api/answer.js": { "maxDuration": 30 },
+    "api/sync.js": { "maxDuration": 10 }
   }
 }

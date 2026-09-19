@@ -46,6 +46,8 @@ h2 { margin-bottom: 0; font-size: 22px; }
 .icon-button { border: 1px solid var(--line); width: 43px; height: 43px; border-radius: 14px; background: var(--panel); color: var(--text); font-size: 20px; }
 
 .notice, .privacy-note { border: 1px solid rgba(255, 193, 92, .26); background: rgba(255, 193, 92, .08); color: #f1d59f; border-radius: 15px; padding: 12px 14px; font-size: 13px; line-height: 1.55; margin-bottom: 14px; }
+.sync-strip { display: flex; justify-content: space-between; gap: 12px; margin: -6px 2px 14px; color: var(--muted); font-size: 12px; }
+.sync-strip span:last-child { color: var(--cyan); }
 .status-card, .question-card, .answer-card { border: 1px solid var(--line); background: linear-gradient(145deg, rgba(16,29,46,.96), rgba(7,16,28,.96)); border-radius: 22px; box-shadow: var(--shadow); }
 .status-card { padding: 17px; margin-bottom: 14px; }
 .status-row { display: flex; gap: 13px; align-items: center; }
@@ -67,6 +69,7 @@ h2 { margin-bottom: 0; font-size: 22px; }
 .answer-text { margin-bottom: 0; font-size: clamp(21px, 5.5vw, 31px); line-height: 1.43; letter-spacing: -0.022em; }
 .answer-timer { color: var(--cyan); letter-spacing: 0; }
 .answer-loading { display: flex; gap: 7px; padding: 36px 0 20px; }
+.answer-loading[hidden] { display: none; }
 .answer-loading span { width: 9px; height: 9px; border-radius: 50%; background: var(--cyan); animation: bounce 1s infinite alternate; }
 .answer-loading span:nth-child(2) { animation-delay: .18s; }
 .answer-loading span:nth-child(3) { animation-delay: .36s; }
@@ -84,10 +87,11 @@ h2 { margin-bottom: 0; font-size: 22px; }
 .dialog form { display: grid; gap: 17px; padding: 20px; }
 .dialog-header { display: flex; justify-content: space-between; align-items: center; gap: 15px; }
 .dialog label { display: grid; gap: 8px; color: #dce7f5; font-size: 13px; font-weight: 750; }
-textarea, select, input[type="file"] { width: 100%; border: 1px solid var(--line); border-radius: 14px; color: var(--text); background: #07101c; padding: 12px; outline: none; }
+textarea, select, input[type="file"], input[type="text"] { width: 100%; border: 1px solid var(--line); border-radius: 14px; color: var(--text); background: #07101c; padding: 12px; outline: none; }
 textarea { resize: vertical; line-height: 1.45; }
 textarea:focus, select:focus, input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(86,168,255,.1); }
 .file-label small { color: var(--muted); font-weight: 500; line-height: 1.45; }
+.setup-note { color: var(--muted); line-height: 1.45; }
 .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .checkbox-label { display: flex !important; grid-template-columns: auto 1fr; align-items: flex-start; gap: 10px !important; line-height: 1.45; }
 .checkbox-label input { margin-top: 3px; accent-color: var(--blue); }

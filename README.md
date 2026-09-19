@@ -2,7 +2,7 @@
 
 A mobile-first installable PWA that listens for interview questions, waits for a pause, and generates short English speaking cues grounded in the candidate's saved profile and job description.
 
-## What the first version includes
+## What this version includes
 
 - Android Chrome continuous speech recognition
 - Automatic restart when browser recognition ends
@@ -13,6 +13,7 @@ A mobile-first installable PWA that listens for interview questions, waits for a
 - Locally saved profile data
 - PWA installation and offline app shell
 - Manual question entry for testing and corrections
+- Phone listener and laptop display modes with a shared private room code
 
 ## Important limitations
 
@@ -30,10 +31,19 @@ A mobile-first installable PWA that listens for interview questions, waits for a
 3. Keep the default Framework Preset as **Other**.
 4. In **Environment Variables**, add:
    - `GEMINI_API_KEY` — from Google AI Studio.
-   - `GEMINI_MODEL` — optional; defaults to `gemini-2.5-flash`.
+   - `GEMINI_MODEL` — optional; defaults to `gemini-3.6-flash`.
 5. Deploy.
 6. Open the HTTPS deployment URL in Android Chrome.
 7. Use Chrome menu → **Add to Home screen**.
+
+## Enable phone + laptop live sync
+
+Connect a free Upstash Redis integration to the Vercel project. It should add either
+`UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`, or
+`KV_REST_API_URL` and `KV_REST_API_TOKEN`. Redeploy after connecting it.
+
+On the phone select **Phone — listen & answer**. On the laptop select
+**Laptop — display answers**. Enter the same private room code on both devices.
 
 ## Local checks
 
