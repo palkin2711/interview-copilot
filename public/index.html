@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#07111f" />
+    <meta name="description" content="A private resume-grounded interview speaking assistant." />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="stylesheet" href="/styles.css" />
+    <title>My Interview Copilot</title>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand-mark" aria-hidden="true">C</div>
+        <div>
+          <p class="eyebrow">PRIVATE SPEAKING ASSISTANT</p>
+          <h1>My Interview Copilot</h1>
+        </div>
+        <button class="icon-button" id="settingsButton" type="button" aria-label="Open profile settings">⚙</button>
+      </header>
+
+      <section class="notice" id="browserNotice" hidden>
+        Use the latest Chrome on Android. Keep this screen open and the phone unlocked during the interview.
+      </section>
+
+      <section class="status-card" aria-live="polite">
+        <div class="status-row">
+          <span class="status-dot" id="statusDot"></span>
+          <div>
+            <p class="status-title" id="statusTitle">Ready to listen</p>
+            <p class="status-copy" id="statusCopy">Set up your profile, then start one listening session.</p>
+          </div>
+        </div>
+        <div class="meter" aria-hidden="true"><span id="meterFill"></span></div>
+      </section>
+
+      <section class="question-card">
+        <div class="section-label">
+          <span>Detected question</span>
+          <button class="text-button" id="editQuestionButton" type="button">Edit</button>
+        </div>
+        <p id="questionText" class="question-text">The interviewer’s completed question will appear here automatically.</p>
+        <p id="interimText" class="interim-text"></p>
+      </section>
+
+      <section class="answer-card" aria-live="polite">
+        <div class="section-label">
+          <span>Suggested answer</span>
+          <span class="answer-timer" id="answerTimer"></span>
+        </div>
+        <div class="answer-loading" id="answerLoading" hidden>
+          <span></span><span></span><span></span>
+        </div>
+        <p id="answerText" class="answer-text">Your short, resume-based English answer will appear here.</p>
+      </section>
+
+      <section class="controls">
+        <button class="primary-button" id="startButton" type="button">
+          <span class="button-icon">●</span>
+          <span id="startButtonText">Start listening</span>
+        </button>
+        <button class="secondary-button" id="testButton" type="button">Test with a question</button>
+      </section>
+
+      <section class="privacy-note">
+        <strong>Before using:</strong> obtain permission where recording or AI assistance requires it. Audio is transcribed by the browser; profile details are sent only when generating an answer.
+      </section>
+    </main>
+
+    <dialog id="settingsDialog" class="dialog">
+      <form id="profileForm" method="dialog">
+        <div class="dialog-header">
+          <div>
+            <p class="eyebrow">PERSONALISE ANSWERS</p>
+            <h2>Your interview profile</h2>
+          </div>
+          <button class="icon-button" id="closeSettings" type="button" aria-label="Close settings">×</button>
+        </div>
+
+        <label>
+          Your profile and resume text
+          <textarea id="profileInput" rows="10" placeholder="Paste your experience, skills, clients and truthful results here..."></textarea>
+        </label>
+
+        <label class="file-label">
+          Add a text resume (.txt)
+          <input id="resumeFile" type="file" accept=".txt,text/plain" />
+          <small>For PDF/DOCX, copy the resume text and paste it above in this first version.</small>
+        </label>
+
+        <label>
+          Job description
+          <textarea id="jobInput" rows="7" placeholder="Paste the client’s job post or role description..."></textarea>
+        </label>
+
+        <div class="two-column">
+          <label>
+            Recognition language
+            <select id="languageInput">
+              <option value="en-US">English (US)</option>
+              <option value="en-GB">English (UK)</option>
+              <option value="en-IN">English (India)</option>
+            </select>
+          </label>
+          <label>
+            Silence before answering
+            <select id="silenceInput">
+              <option value="1300">1.3 seconds</option>
+              <option value="1800" selected>1.8 seconds</option>
+              <option value="2400">2.4 seconds</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="checkbox-label">
+          <input id="autoAnswerInput" type="checkbox" checked />
+          Automatically generate an answer after the interviewer stops speaking
+        </label>
+
+        <p class="form-message" id="profileMessage"></p>
+        <button class="primary-button" type="submit">Save profile</button>
+      </form>
+    </dialog>
+
+    <dialog id="questionDialog" class="dialog compact-dialog">
+      <form id="questionForm" method="dialog">
+        <div class="dialog-header">
+          <h2>Confirm question</h2>
+          <button class="icon-button" id="closeQuestion" type="button" aria-label="Close">×</button>
+        </div>
+        <label>
+          Interviewer’s question
+          <textarea id="manualQuestionInput" rows="5"></textarea>
+        </label>
+        <button class="primary-button" type="submit">Generate answer</button>
+      </form>
+    </dialog>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
