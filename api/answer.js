@@ -25,7 +25,8 @@ STRICT RULES:
 - Use simple vocabulary suitable for a non-native English speaker.
 - If the transcript is not a complete interview question, return exactly: WAIT
 - Return only the answer, with no heading, disclaimer, quotation marks, or coaching notes.
-- Keep it between 30 and 60 words, normally 2 to 4 short sentences.
+- Give a complete interview-ready answer between 50 and 90 words, normally 4 to 6 short sentences.
+- Never stop in the middle of a sentence. End with a complete final sentence.
 - Start directly; do not repeat the question.
 
 CANDIDATE PROFILE / RESUME:
@@ -39,6 +40,30 @@ ${history.length ? JSON.stringify(history) : "None"}
 
 INTERVIEWER QUESTION:
 ${question}`;
+}
+
+async function askGemini(url, prompt) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.35,
+        topP: 0.9,
+        maxOutputTokens: 500
+      },
+      safetySettings: [
+        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
+        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" }
+      ]
+    })
+  });
+  const data = await response.json();
+  if (!response.ok) throw Object.assign(new Error(data?.error?.message || "Gemini request failed."), { status: response.status });
+  const answer = data?.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("\n").trim();
+  return { answer, finishReason: data?.candidates?.[0]?.finishReason || "" };
 }
 
 export default async function handler(req, res) {
@@ -63,34 +88,15 @@ export default async function handler(req, res) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
   try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: buildPrompt(req.body || {}) }] }],
-        generationConfig: {
-          temperature: 0.35,
-          topP: 0.9,
-          maxOutputTokens: 140
-        },
-        safetySettings: [
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" }
-        ]
-      })
-    });
+    const prompt = buildPrompt(req.body || {});
+    let result = await askGemini(url, prompt);
+    let answer = result.answer;
 
-    const data = await response.json();
-    if (!response.ok) {
-      const message = data?.error?.message || "Gemini request failed.";
-      return res.status(response.status).json({ error: message });
+    const wordCount = String(answer || "").split(/\s+/).filter(Boolean).length;
+    if (answer && answer.toUpperCase() !== "WAIT" && (wordCount < 25 || result.finishReason === "MAX_TOKENS")) {
+      result = await askGemini(url, `${prompt}\n\nYour previous response was incomplete. Return one fresh, complete 50 to 90 word answer with 4 to 6 finished sentences.`);
+      answer = result.answer;
     }
-
-    const answer = data?.candidates?.[0]?.content?.parts
-      ?.map((part) => part.text || "")
-      .join("\n")
-      .trim();
 
     if (!answer) {
       return res.status(502).json({ error: "No answer was returned. Please try again." });
@@ -103,6 +109,6 @@ export default async function handler(req, res) {
     res.setHeader("Cache-Control", "no-store");
     return res.status(200).json({ answer });
   } catch (error) {
-    return res.status(500).json({ error: error?.message || "Unexpected server error." });
+    return res.status(error?.status || 500).json({ error: error?.message || "Unexpected server error." });
   }
 }
