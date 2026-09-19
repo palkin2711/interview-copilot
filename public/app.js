@@ -14,7 +14,8 @@
     sessionStartedAt: null,
     history: [],
     syncTimer: null,
-    lastSyncAt: 0
+    lastSyncAt: 0,
+    pendingQuestion: ""
   };
 
   const els = Object.fromEntries([
@@ -165,9 +166,14 @@
     state.silenceTimer = window.setTimeout(() => {
       const candidate = normalizeTranscript(state.finalTranscript);
       state.finalTranscript = "";
-      if (!candidate || candidate === state.lastSubmitted || state.processing) return;
+      if (!candidate || candidate === state.lastSubmitted) return;
       els.questionText.textContent = candidate;
       pushSync(candidate, "", "Preparing answer");
+      if (state.processing) {
+        state.pendingQuestion = candidate;
+        setStatus("thinking", "Next question captured", "It will be answered automatically after the current answer is ready.");
+        return;
+      }
       if (autoAnswer && looksLikeQuestion(candidate)) {
         generateAnswer(candidate);
       } else if (autoAnswer) {
@@ -241,6 +247,7 @@
     state.sessionStartedAt = Date.now();
     state.finalTranscript = "";
     state.lastSubmitted = "";
+    state.pendingQuestion = "";
     state.recognition = createRecognition();
     try {
       state.recognition.start();
@@ -311,13 +318,21 @@
       state.history = state.history.slice(-6);
       setStatus(state.listening ? "listening" : "", state.listening ? "Listening for the next question" : "Answer ready", state.listening ? "You do not need to press anything for the next question." : "Review the answer in your own words.");
     } catch (error) {
-      els.answerText.textContent = `Could not generate the answer: ${error.message}`;
+      const busy = /high demand|temporar|overload|unavailable/i.test(error.message || "");
+      els.answerText.textContent = busy
+        ? "Gemini is temporarily busy. The app tried three times automatically. Please continue listening; the next question will be attempted normally."
+        : `Could not generate the answer: ${error.message}`;
       pushSync(cleanQuestion, els.answerText.textContent, "Answer generation failed");
-      setStatus("error", "Answer generation failed", "Check the Gemini API key and internet connection, then try again.");
+      setStatus("error", busy ? "Gemini is temporarily busy" : "Answer generation failed", busy ? "Three fast retries were attempted automatically." : "Check the Gemini API key and internet connection, then try again.");
     } finally {
       state.processing = false;
       els.answerLoading.hidden = true;
       els.answerText.hidden = false;
+      const nextQuestion = state.pendingQuestion;
+      state.pendingQuestion = "";
+      if (nextQuestion && nextQuestion !== state.lastSubmitted) {
+        window.setTimeout(() => generateAnswer(nextQuestion), 120);
+      }
     }
   }
 

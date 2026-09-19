@@ -21,11 +21,13 @@ STRICT RULES:
 - Use only facts present in the candidate profile, resume, job description, or conversation history.
 - Never invent clients, qualifications, numbers, tools, results, employers, or experience.
 - If the profile lacks the requested fact, give an honest bridge answer explaining how the candidate would approach it.
-- Write in first person, natural spoken English.
+- Write in first person, natural spoken English that sounds like a confident human candidate, not an AI or textbook.
 - Use simple vocabulary suitable for a non-native English speaker.
 - If the transcript is not a complete interview question, return exactly: WAIT
 - Return only the answer, with no heading, disclaimer, quotation marks, or coaching notes.
-- Give a complete interview-ready answer between 50 and 90 words, normally 4 to 6 short sentences.
+- Give a complete interview-ready answer between 70 and 120 words, normally 5 to 8 natural sentences.
+- Directly answer the question first, then briefly explain the approach or a truthful example, and finish with the result or takeaway.
+- For behavioural or example questions, use a compact Situation–Action–Result flow without naming those headings.
 - Never stop in the middle of a sentence. End with a complete final sentence.
 - Start directly; do not repeat the question.
 
@@ -51,7 +53,7 @@ async function askGemini(url, prompt) {
       generationConfig: {
         temperature: 0.35,
         topP: 0.9,
-        maxOutputTokens: 500
+        maxOutputTokens: 700
       },
       safetySettings: [
         { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
@@ -64,6 +66,26 @@ async function askGemini(url, prompt) {
   if (!response.ok) throw Object.assign(new Error(data?.error?.message || "Gemini request failed."), { status: response.status });
   const answer = data?.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("\n").trim();
   return { answer, finishReason: data?.candidates?.[0]?.finishReason || "" };
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function askGeminiWithRetry(url, prompt) {
+  const delays = [0, 250, 700];
+  let lastError;
+  for (let attempt = 0; attempt < delays.length; attempt += 1) {
+    if (delays[attempt]) await wait(delays[attempt]);
+    try {
+      return await askGemini(url, prompt);
+    } catch (error) {
+      lastError = error;
+      const temporary = [429, 500, 502, 503, 504].includes(Number(error?.status)) || /high demand|temporar|overload|unavailable/i.test(error?.message || "");
+      if (!temporary) throw error;
+    }
+  }
+  throw lastError;
 }
 
 export default async function handler(req, res) {
@@ -89,12 +111,12 @@ export default async function handler(req, res) {
 
   try {
     const prompt = buildPrompt(req.body || {});
-    let result = await askGemini(url, prompt);
+    let result = await askGeminiWithRetry(url, prompt);
     let answer = result.answer;
 
     const wordCount = String(answer || "").split(/\s+/).filter(Boolean).length;
-    if (answer && answer.toUpperCase() !== "WAIT" && (wordCount < 25 || result.finishReason === "MAX_TOKENS")) {
-      result = await askGemini(url, `${prompt}\n\nYour previous response was incomplete. Return one fresh, complete 50 to 90 word answer with 4 to 6 finished sentences.`);
+    if (answer && answer.toUpperCase() !== "WAIT" && (wordCount < 40 || result.finishReason === "MAX_TOKENS")) {
+      result = await askGeminiWithRetry(url, `${prompt}\n\nYour previous response was incomplete. Return one fresh, complete 70 to 120 word answer with 5 to 8 finished, natural sentences.`);
       answer = result.answer;
     }
 
